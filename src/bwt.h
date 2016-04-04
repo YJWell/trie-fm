@@ -279,7 +279,6 @@ public:
        }
 
        //calculate the letter count upto idx (not included)
-       tr1::unordered_map<u_int8_t,fmint_t>::iterator Ccheck_it,occ_it;
        if(pos>idx)
        {
            for(size_t j=0;j<CHILDNUM;j++)
