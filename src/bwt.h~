@@ -16,6 +16,9 @@
 #include <utility>
 #include <stack>
 #include <iostream>
+//#include <boost/serialization/vector.hpp>
+//#include <boost/serialization/unordered_map.hpp>
+//#include <boost/serialization/string.hpp>
 
 #include "divsufsort.h"
 
@@ -37,7 +40,7 @@ public:
         EOS='$';
         EOC='%';
         best_bound_found=0;
-        num_alignments_output=10;
+        num_alignments_output=1;
         matches.reserve(1000);
         inex_bounds.reserve(500);
         best_bound.fill(0);
@@ -286,7 +289,14 @@ public:
            {
                if(BIT_CHECK(children_flag,j))
                {
-                    trie_bound_stack[stack_level*9+tb+j]=C[check][j]-trie_bound_stack[stack_level*9+tb+j]+occ[j];
+                   Ccheck_it=C[check].find(j);
+                   if(Ccheck_it!=C[check].end())
+                       trie_bound_stack[stack_level*9+tb+j]=Ccheck_it->second-trie_bound_stack[stack_level*9+tb+j];
+                   else
+                       trie_bound_stack[stack_level*9+tb+j]=Ccheck_it->second;
+                   occ_it=occ.find(j);
+                   if(occ_it!=occ.end())
+                       trie_bound_stack[stack_level*9+tb+j]+=occ_it->second;
                }
            }
        }
@@ -296,7 +306,12 @@ public:
            {
                if(BIT_CHECK(children_flag,j))
                {
-                    trie_bound_stack[stack_level*9+tb+j]+=C[check][j]+occ[j];
+                   Ccheck_it=C[check].find(j);
+                   if(Ccheck_it!=C[check].end())
+                       trie_bound_stack[stack_level*9+tb+j]+=Ccheck_it->second;
+                   occ_it=occ.find(j);
+                   if(occ_it!=occ.end())
+                       trie_bound_stack[stack_level*9+tb+j]+=occ_it->second;
                }
            }
        }
@@ -381,8 +396,8 @@ public:
         else
         {           
             inex_bounds.clear();
-            _findInexBounds(q,qc,z,top,bot);
-            //_findInexBoundsOnceForAllLetters(q,qc,z,top,bot,0,false,false);
+            //_findInexBounds(q,qc,z,top,bot);
+            _findInexBoundsOnceForAllLetters(q,qc,z,top,bot,0,false,false);
             for(auto inex_bound=inex_bounds.begin();inex_bound!=inex_bounds.end();inex_bound++)
             {
                 if(inex_bound->second-inex_bound->first>num_alignments_output)
@@ -514,12 +529,12 @@ public:
         return encoded_bwt_str;
     }
 
-    array<fmint_t,CHILDNUM+2>& returnOcc()
+    tr1::unordered_map <u_int8_t,fmint_t>& returnOcc()
     {
         return occ;
     }
 
-    vector< array<fmint_t,CHILDNUM+2> >& returnCheckpoints()
+    vector< tr1::unordered_map<u_int8_t,fmint_t> >& returnCheckpoints()
     {
         return C;
     }
@@ -575,7 +590,6 @@ private:
     /// s is the bwt transformed string
     void _calcOccAndCheckpoints(vector<u_int8_t> &encoded_s)
     {
-        /*
         tr1::unordered_map<u_int8_t,fmint_t> A;//letter count
         fmint_t i=0;
         for(vector<u_int8_t>::iterator encoded_c=encoded_s.begin();encoded_c!=encoded_s.end();++encoded_c,i++)
@@ -602,30 +616,6 @@ private:
         {
             occ[*encoded_c]=idx;//first index of letters
             idx=idx+A[*encoded_c];
-        }
-        C_len=C.size();
-        */
-        array<fmint_t,CHILDNUM+2> A;
-        A.fill(0);
-        fmint_t i;
-        C.reserve(len/step+1);
-        for(i=0;i<len;i++)
-        {
-            if(i%step==0)
-                C.push_back(A);
-            A[encoded_s[i]]++;
-        }
-
-        //occ.resize(CHILDNUM+2);
-        fmint_t idx=0;
-        occ[CHILDNUM]=idx;
-        idx+=A[CHILDNUM];
-        occ[CHILDNUM+1]=idx;
-        idx+=A[CHILDNUM+1];
-        for(i=0;i<CHILDNUM;i++)
-        {
-            occ[i]=idx;//first index of letters
-            idx+=A[i];
         }
         C_len=C.size();
     }
@@ -813,7 +803,7 @@ private:
             return;
         }
         if(z)
-        {
+        {/*
             if(DEL)
             {
                 _findInexBoundsOnceForAllLetters(q,qc+1,-1,top,bot,stack_level,true,false);//skip one letter of q,insertion
@@ -821,7 +811,7 @@ private:
             else
             {
                 _findInexBoundsOnceForAllLetters(q,qc+1,z-1,top,bot,stack_level,true,false);//skip one letter of q,insertion
-            }
+            }*/
             _lfAllLetters(top,stack_level,0);
             _lfAllLetters(bot,stack_level,1);
             for(u_int8_t c=0;c<CHILDNUM;c++)
@@ -829,7 +819,7 @@ private:
                 top=bound_stack[entries_of_bound_stack*stack_level+c*2];
                 bot=bound_stack[entries_of_bound_stack*stack_level+c*2+1];
                 if(top<bot)
-                {
+                {/*
                     if(IN)
                     {
                         _findInexBoundsOnceForAllLetters(q,qc,-1,top,bot,stack_level+1,false,true);//add one letter for q,deletion
@@ -837,7 +827,7 @@ private:
                     else
                     {
                         _findInexBoundsOnceForAllLetters(q,qc,z-1,top,bot,stack_level+1,false,true);//add one letter for q,deletion
-                    }
+                    }*/
                     if(c==*qc)
                     {
                         _findInexBoundsOnceForAllLetters(q,qc+1,z,top,bot,stack_level+1,false,false);
@@ -1040,7 +1030,6 @@ private:
         }
 
         //calculate the letter count upto idx (not included)
-        /*
         tr1::unordered_map<u_int8_t,fmint_t>::iterator Ccheck_it,occ_it;
         if(pos>idx)
         {
@@ -1067,22 +1056,6 @@ private:
                 if(occ_it!=occ.end())
                     bound_stack[entries_of_bound_stack*stack_level+j*2+tb]+=occ_it->second;
             }
-        }*/
-
-
-        if(pos>idx)
-        {
-            for(u_int8_t j=0;j<CHILDNUM;j++)
-            {
-                bound_stack[entries_of_bound_stack*stack_level+j*2+tb]=C[check][j]-bound_stack[entries_of_bound_stack*stack_level+j*2+tb]+occ[j];
-            }
-        }
-        else
-        {
-            for(u_int8_t j=0;j<CHILDNUM;j++)
-            {
-                bound_stack[entries_of_bound_stack*stack_level+j*2+tb]+=C[check][j]+occ[j];
-            }
         }
 
     }
@@ -1107,7 +1080,7 @@ private:
         fmint_t pos=check*step;
 
         //count of the letter s[idx] upto pos (not included)
-        fmint_t count;/*
+        fmint_t count;
         tr1::unordered_map<u_int8_t,fmint_t>::iterator Ccheck_it= C[check].find(letter);
         if(Ccheck_it==C[check].end())//cannot find
         {
@@ -1116,8 +1089,8 @@ private:
         else
         {
             count=Ccheck_it->second;
-        }*/
-        count=C[check][letter];
+        }
+
         //range between pos and idx
         fmint_t range[2];
         if(pos<idx)
@@ -1170,7 +1143,7 @@ private:
         //r=(sa[i/gap]+r)%len;
         return (sa[i/gap]+r)%len;
     }
-    /*
+
     ///get the first occurance of letter qc in left-column
     fmint_t _occ(const u_int8_t qc)
     {
@@ -1185,7 +1158,7 @@ private:
             c=occ_it->second;
         }
         return c;
-    }*/
+    }
 
     ///count the occurances of letter qc (rank of qc) upto position idx
     fmint_t _count(const fmint_t idx,const u_int8_t qc)
@@ -1200,8 +1173,8 @@ private:
         fmint_t pos=check*step;
 
         //count of the letter s[idx] upto pos (not included)
-        fmint_t count;/*
-        tr1::unordered_map<u_int8_t,fmint_t>::iterator Ccheck_it= C[check].find(letter);
+        fmint_t count;
+        tr1::unordered_map<u_int8_t,fmint_t>::iterator Ccheck_it= C[check].find(qc);
         if(Ccheck_it==C[check].end())//cannot find
         {
             count=0;
@@ -1209,8 +1182,7 @@ private:
         else
         {
             count=Ccheck_it->second;
-        }*/
-        count=C[check][qc];
+        }
 
         //range between pos and idx
         fmint_t range[2];
@@ -1256,8 +1228,7 @@ private:
         //o=_occ(qc);
         //c=_count(idx,qc);
         //return o+c;
-        //return _occ(qc)+_count(idx,qc);
-        return occ[qc]+_countLetterWithCheckpoints(idx,qc);
+        return _occ(qc)+_count(idx,qc);
     }
 
     ///encode string
@@ -1287,7 +1258,7 @@ private:
     /*----------------------------------------------------------
      * For serialization
      * ---------------------------------------------------------*/
-
+/*
     template<class Archive>
     void serialize(Archive & ar, const unsigned int version)
     {
@@ -1300,7 +1271,7 @@ private:
         ar & len;
         ar & C_len;
     }
-
+*/
 
     fmint_t step;//step of the checkpoints C
     fmint_t gap;//gap of the checkpoints sa
@@ -1309,10 +1280,8 @@ private:
     vector<u_int8_t> encoded_bwt_str;//transformed bwt string
     saint64_t *full_sa;//suffix array
     vector<fmint_t> sa;//checkpoints of suffix array
-    //tr1::unordered_map<u_int8_t,fmint_t> occ;//first occurance of letters
-    array<fmint_t,CHILDNUM+2> occ;//first occurance of letters
-    //vector< tr1::unordered_map<u_int8_t,fmint_t> > C;//list of checkpoints
-    vector< array<fmint_t,CHILDNUM+2> > C;
+    tr1::unordered_map<u_int8_t,fmint_t> occ;//first occurance of letters
+    vector< tr1::unordered_map<u_int8_t,fmint_t> > C;//list of checkpoints
     size_t len;//length of transformed bwt string
     size_t C_len;//length of checkpoints
     vector< pair<fmint_t,fmint_t> > inex_bounds;//container holding inexact matched top,bot pairs
@@ -1321,7 +1290,7 @@ private:
     uint num_alignments_output;
     int entries_of_bound_stack;
     int best_bound_found;
-    friend class boost::serialization::access;//serialization
+    //friend class boost::serialization::access;//serialization
 
 public:
     int match_status;//indicate a query is exactly matched or inexactly matched, 1 = exact, 0 = inexact
@@ -1331,4 +1300,3 @@ public:
 };
 
 #endif // BWT_H
-
